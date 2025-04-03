@@ -13,9 +13,10 @@ vel_x[1:-1, 0] = 1  # Configurar la condicion inicial de la frontera
 
 for m in range (1, M - 1):
     for n in range (1, N - 1):
-        vel_x[m, n] = 1 #llenamos el centro con velocidades
+        vel_x[m, n] = 1 - (n/(N-2)) #llenamos el centro con velocidades
 
 # Función para calcular el vector F(X) evaluado en V
+
 def construir_F(VX, vy, N, M):
 
     F = np.zeros((M-2, N-2))
@@ -86,7 +87,7 @@ def construir_F(VX, vy, N, M):
 def construir_J(VX, vy, N, M):
     total_cuadros_centro = (N - 2) * (M - 2)
     J = sp.lil_matrix((total_cuadros_centro, total_cuadros_centro))
-    constante = 0
+    constante = 1
 
     for n in range (total_cuadros_centro):
         for m in range (total_cuadros_centro):
@@ -163,14 +164,6 @@ def construir_J(VX, vy, N, M):
 
     return J.tocsr()
 
-J = construir_F(vel_x, 0, N, M)
-cond_J = spla.norm(J, ord=2) * spla.norm(spla.inv(J), ord=2)
-
-if np.isinf(cond_J) or np.isnan(cond_J):
-    print("La matriz J es singular o mal condicionada.")
-else:
-    print(f"Condición de J: {cond_J}")
-
 # Método de Newton-Raphson
 def resolver_sistema(vx, vy, N, M, tolerancia, ITER, ITER_OG):
     try:
@@ -207,5 +200,5 @@ def graficar_resultado(vx_final):
     plt.ylabel('Índice j', fontsize=12)
     plt.show()
 
-vel_x_final = resolver_sistema(vel_x, 0, N, M, 1, 5, 5)
+vel_x_final = resolver_sistema(vel_x, 0, N, M, 1, 1, 1)
 graficar_resultado(vel_x_final)
