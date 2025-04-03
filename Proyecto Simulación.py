@@ -74,20 +74,11 @@ def construir_F(VX, vy, N, M):
 
     return F.flatten()
 
-#F = construir_F(vel_x, 0, N, M)
-#print(F.shape)
-# plt.imshow(F, cmap='hot', interpolation='nearest')
-# plt.colorbar(label="Valor de F")
-# plt.title("Mapa de calor de F")
-# plt.xlabel("Eje X")
-# plt.ylabel("Eje Y")
-# plt.show()
-
 # Función para calcular la matrix J(X) evaluada en V
 def construir_J(VX, vy, N, M):
     total_cuadros_centro = (N - 2) * (M - 2)
-    J = sp.lil_matrix((total_cuadros_centro, total_cuadros_centro))
-    constante = 1
+    J = np.zeros((total_cuadros_centro, total_cuadros_centro))
+    constante = -1
 
     for n in range (total_cuadros_centro):
         for m in range (total_cuadros_centro):
@@ -161,8 +152,7 @@ def construir_J(VX, vy, N, M):
                 
             else:
                 0
-
-    return J.tocsr()
+    return J
 
 # Método de Newton-Raphson
 def resolver_sistema(vx, vy, N, M, tolerancia, ITER, ITER_OG):
@@ -200,5 +190,5 @@ def graficar_resultado(vx_final):
     plt.ylabel('Índice j', fontsize=12)
     plt.show()
 
-vel_x_final = resolver_sistema(vel_x, 0, N, M, 1, 1, 1)
+vel_x_final = resolver_sistema(vel_x, 0, N, M, 1, 5, 5)
 graficar_resultado(vel_x_final)
