@@ -86,8 +86,6 @@ def construir_F(VX, vy, N, M):
 def construir_J(VX, vy, N, M):
     total_cuadros_centro = (N - 2) * (M - 2)
     J = sp.lil_matrix((total_cuadros_centro, total_cuadros_centro))
-    casos = np.zeros((total_cuadros_centro, total_cuadros_centro))  # Matriz para identificar los casos
-
     constante = 0
 
     for n in range (total_cuadros_centro):
@@ -102,160 +100,70 @@ def construir_J(VX, vy, N, M):
             #derivadas del centro
             if N - 1 <= k <= ((N - 2) * (M - 3)) - 2:
                 J[k, k] = 1/8 * VX[m, n-1] - 1/8 * VX[m, n+1] - constante
-                casos[k, k] = 5
-
                 J[k, k+1] = 1/4 - 1/8 * VX[m, n]
-                casos[k, k+1] = 1
-
                 J[k, k-1] = 1/4 + 1/8 * VX[m, n]
-                casos[k, k-1] = 2
-
                 J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                casos[k, k+(N-2)] = 3
-
                 J[k, k-(N-2)] = 1/4 + 1/8 * vy
-                casos[k, k-(N-2)] = 4
-
-                print((k, k), (k, k+1), (k, k-1), (k, k+(N-2)), (k, k-(N-2)), (n-1, m), (n+1, m), (n, m))
-
+                
             #derivadas de la izquierda
             if k % (N - 2) == 0 and k != 0 and k != (N - 2) * (M - 3):
                 J[k, k] = 1/8 - 1/8 * VX[m, 2] - constante
-                casos[k, k] = 5
-
                 J[k, k+1] = 1/4 - 1/8 * VX[m, 1]
-                casos[k, k+1] = 1
-
                 J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                casos[k, k+(N-2)] = 3
-                
                 J[k, k-(N-2)] = 1/4 + 1/8 * vy
-                casos[k, k-(N-2)] = 4
-
-                print((k, k), (k, k+1), (k, k+(N-2)), (k, k-(N-2)), (2, m), (1, m))
-            
+                
             #derivadas de la derecha
             for w in range(2, M - 2):
                 if (k / (w * (N - 2) - 1)) == 1 and k != 0:
                     J[k, k] = 1/8 * VX[m, N-3] - constante
-                    casos[k, k] = 5
-
                     J[k, k-1] = 1/4 + 1/8 * VX[m, N-2]
-                    casos[k, k-1] = 2
-
                     J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                    casos[k, k+(N-2)] = 3
-                
                     J[k, k-(N-2)] = 1/4 + 1/8 * vy
-                    casos[k, k-(N-2)] = 4
-
-                    print((k, k), (k, k-1), (k, k+(N-2)), (k, k-(N-2)), (m, N-3), (m, N-2))
-            
+                    
             #derivadas de arriba
             if 1 <= k <= (N - 4):
                 J[k, k] = 1/8 * VX[m, n-1] - 1/8 * VX[m, n+1] - constante
-                casos[k, k] = 5
-
                 J[k, k+1] = 1/4 - 1/8 * VX[1, n]
-                casos[k, k+1] = 1
-
                 J[k, k-1] = 1/4 + 1/8 * VX[1, n]
-                casos[k, k-1] = 2
-
                 J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                casos[k, k+(N-2)] = 3
-
-                print((k, k), (k, k+1), (k, k-1), (k, k+(N-2)), (n-1, m), (n+1, m), (n, 1))
-
+                
             #derivadas de abajo
             elif (((N - 2) * (M - 3)) + 1) <= k <= (((N - 2) * (M - 2)) - 2):
                 J[k, k] = 1/8 * VX[m, n-1] - 1/8 * VX[m, n+1] - constante
-                casos[k, k] = 5
-
                 J[k, k+1] = 1/4 - 1/8 * VX[m, n]
-                casos[k, k+1] = 1
-
                 J[k, k-1] = 1/4 + 1/8 * VX[m, n]
-                casos[k, k-1] = 2
-
                 J[k, k-(N-2)] = 1/4 + 1/8 * vy
-                casos[k, k-(N-2)] = 4
-
-                print((k, k), (k, k+1), (k, k-1), (k, k-(N-2)), (n-1, m), (n+1, m), (n, m))
-            
+                
             #derivada cuadro esquina superior izquierda
             elif k == 0:
                 J[k, k] = 1/8 - 1/8 * VX[1, 2] - constante
-                casos[k, k] = 5
-
                 J[k, k+1] = 1/4 - 1/8 * VX[1, 1]
-                casos[k, k+1] = 1
-
                 J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                casos[k, k+(N-2)] = 3
-
-                print((k, k), (k, k+1), (k, k+(N-2)), (2, 1), (1, 1))
-
+                
             #derivada cuadro esquina superior derecha
             elif k == (N - 3):
                 J[k, k] = 1/8 * VX[1, N - 3] - constante
-                casos[k, k] = 5
-
                 J[k, k-1] = 1/4 + 1/8 * VX[1, N-2]
-                casos[k, k-1] = 2
-
                 J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                casos[k, k+(N-2)] = 3
-
-                print((k, k), (k, k-1), (k, k+(N-2)), (N-3, 1) , (N-2, 1))
-            
+                
             #derivada cuadro esquina inferior izquierda
             elif k == ((N - 2) * (M - 3)):
                 J[k, k] = 1/8 - 1/8 * VX[M-2, 2] - constante
-                casos[k, k] = 5
-
                 J[k, k+1] = 1/4 - 1/8 * VX[M-2, 1]
-                casos[k, k+1] = 1
-
                 J[k, k-(N-2)] = 1/4 + 1/8 * vy
-                casos[k, k-(N-2)] = 4
-
-                print((k, k), (k, k+1), (k, k-(N-2)), (M-2, 2), (M-2, 1))
 
             #derivada cuadro esquina inferior derecha
             elif k == ((N - 2) * (M - 2) - 1):
                 J[k, k] = 1/8 * VX[M-2, N-3] - constante
-                casos[k, k] = 5
-
                 J[k, k-1] = 1/4 + 1/8 * VX[M-2, N-2]
-                casos[k, k-1] = 2
-
                 J[k, k-(N-2)] = 1/4 + 1/8 * vy
-                casos[k, k-(N-2)] = 4
-
-                print((k, k), (k, k-1), (k, k-(N-2)), (M-2, N-3), (M-2, N-2))
-
+                
             else:
                 0
 
-    return J.tocsr(), casos
+    return J.tocsr()
 
-# Construir Jacobiano y obtener la matriz de casos
-J, casos = construir_J(vel_x, 0, N, M)
-print(J.shape)
-
-# # Graficar la matriz Jacobiana con colores según el caso de derivada
-plt.figure(figsize=(8, 8))
-plt.spy(J, markersize=2, color="black")  # Mostrar la estructura de la matriz J
-plt.imshow(casos, cmap="coolwarm", alpha=0.5)  # Superponer la matriz de casos con colores
-
-# Leyenda de colores
-plt.colorbar(label="Caso de derivada")
-plt.title("Estructura de la matriz Jacobiana con casos diferenciados")
-plt.xlabel("Índice de columna")
-plt.ylabel("Índice de fila")
-plt.show()
-
+J = construir_F(vel_x, 0, N, M)
 cond_J = spla.norm(J, ord=2) * spla.norm(spla.inv(J), ord=2)
 
 if np.isinf(cond_J) or np.isnan(cond_J):
