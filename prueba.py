@@ -11,7 +11,7 @@ from scipy.sparse import csc_array
 np.set_printoptions(threshold=np.inf, linewidth=np.inf)  # se intenta evitar saltos de línea
 
 # Definir dimensiones de la malla
-Columnas, Filas = 5, 5
+Columnas, Filas = 20, 20  # Cambiado de 5,5 a 20,20
 
 # Inicializar matriz de velocidad
 vel_x_1 = Matriz_Redución_Completa(Filas, Columnas, 10)
@@ -127,41 +127,61 @@ def construir_J(VX, vy, N, M, constante, precision):
 # Método de Newton-Raphson
 def resolver_sistema(VX, vy, c, N, M, tolerancia, ITER, ITER_OG, precision):
     try:
-        #graficar_resultado(vx)
         print(f"Iteración {ITER_OG - ITER + 1}")
 
         F, S = construir_F(VX, vy, N, M, precision)
         J, K = construir_J(VX, vy, N, M, c, precision)
-        H2 = np.linalg.solve(K, -F)
-        H1 = spla.spsolve(J, -F)
+        
+        try:
+            H1 = spla.spsolve(J, -F)
+            max_H = max(abs(H1))
+        except:
+            print("Error al resolver el sistema, usando método alternativo")
+            # Usar un método más estable para matrices grandes
+            H1 = spla.gmres(J, -F)[0]
+            max_H = max(abs(H1))
+        
         Graficar_Jacobiano(K)
         Graficar_Matriz(F.reshape((M-2, N-2)))
-        max_H = max(abs(H1))
        
-        # print("J", np.array2string(J, separator=', ', threshold=np.inf))
-        # print("F", np.array2string(F, separator=', ', threshold=np.inf))
         print("vx", VX)
         print("h1", H1, max_H)
-        # print("h2", H2, max_H)
-        # print(np.dot(K, H1))
 
         if max_H < tolerancia or ITER == 0:
             return VX
         
-        nuevo_vx = VX
-        nuevo_vx[1:M-1, 1:N-1] = VX[1:M-1, 1:N-1] + H1.reshape((M-2, N-2))
+        # Ajustar el factor de amortiguamiento según el tamaño de la matriz
+        # Para matrices más grandes, usar un factor más pequeño
+        factor_amortiguamiento = 0.1  # Reducido para mayor estabilidad
         
+        nuevo_vx = VX.copy()
+        
+        # Aplicar la actualización con límites para evitar cambios bruscos
+        delta = factor_amortiguamiento * H1.reshape((M-2, N-2))
+        # Limitar el cambio máximo por iteración
+        delta = np.clip(delta, -0.5, 0.5)
+        
+        nuevo_vx[1:M-1, 1:N-1] = VX[1:M-1, 1:N-1] - delta
+        
+        # Asegurar que no haya valores negativos
+        nuevo_vx = np.maximum(nuevo_vx, 0)
+        # Asegurar que no exceda valores razonables
+        nuevo_vx = np.minimum(nuevo_vx, 10)
 
         return resolver_sistema(nuevo_vx, vy, c, N, M, tolerancia, ITER-1, ITER_OG, precision)
 
     except spla.MatrixRankWarning:
+        print("Advertencia: Matriz de rango deficiente")
         return VX
     
-    except RuntimeError as e:
+    except Exception as e:
+        print(f"Error: {e}")
         return VX
 
 # ValIniCentroMatrizVelX(Filas, Columnas, vel_x, 1, 10)
 # distParabolica(Filas, Columnas, vel_x, 10)
 i = 1
+# Aumentar el número de iteraciones para una matriz más grande
+i = 5  # Más iteraciones para una matriz 20x20
 vel_x_final = resolver_sistema(vel_x_1, 0, 1, Columnas, Filas, pow(10, -1), i, i, 20)
 Graficar_Matriz(vel_x_final)
