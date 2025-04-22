@@ -1,186 +1,168 @@
-import numpy as np
-import scipy.sparse as sp
-import scipy.sparse.linalg as spla
-import matplotlib.pyplot as plt
-from scipy.sparse import csc_array
+# Importar las funciones de Inicializaciones y Graficaciones
+from Inicializaciones import *
 from Graficaciones import *
-from Métodos_Resolver_Sistemas import *
 
-# Definir dimensiones de la malla
-N, M = 50, 8
+# Importar librerías necesarias
+import numpy as np
+import scipy.sparse.linalg as spla
 
-# Inicializar matriz de velocidad
-vel_x_1 = np.zeros((M, N))
-vel_x_2 = np.zeros((M, N))
-vel_x_3 = np.zeros((M, N))
-
-vel_x_1[1:-1, 0] = 1  # Configurar la condicion inicial de la frontera
-vel_x_2[1:-1, 0] = 1  # Configurar la condicion inicial de la frontera
-vel_x_3[1:-1, 0] = 1  # Configurar la condicion inicial de la frontera
-
-for m in range (1, M - 1):
-    for n in range (1, N - 1):
-        vel_x_1[m, n] = 1 - (n/(2*N-4)) #llenamos el centro con velocidades
-        vel_x_2[m, n] = 1 #llenamos el centro con velocidades
-        vel_x_3[m, n] = 0 #llenamos el centro con velocidades
-        
+# configuracion de numpy que me permite ver la matriz jacobiana sin salto de linea
+np.set_printoptions(threshold=np.inf, linewidth=np.inf)  # se intenta evitar saltos de línea
 
 # Función para calcular el vector F(X) evaluado en V
-def construir_F(VX, vy, N, M):
-
+def construir_F(VX, vy, N, M, precision):
+    # Inicializar la matriz F
     F = np.zeros((M-2, N-2), dtype=float)
     
-    for n in range (1, N-1):
-        for m in range (1, M-1):
-            eq = (1/4) * (VX[m, n+1] + VX[m, n-1] + VX[m+1, n] + VX[m-1, n]
-                + (1/2) * (-VX[m, n] * VX[m, n+1] + VX[m, n] * VX[m, n-1] 
-                - vy * VX[m+1, n] + vy * VX[m-1, n]))
-                
+    for m in range (1, M-1):
+        for n in range (1, N-1):
+            # Calcular la ecuación para el punto (m, n)
+            eq = round((1/4) * (VX[m, n+1] + VX[m, n-1] + VX[m+1, n] + VX[m-1, n])
+                       + (1/8) * (VX[m, n] * (VX[m, n-1] - VX[m, n+1])
+                       + vy * (VX[m-1, n] - VX[m+1, n])) - VX[m, n], precision)
+            
             # Asignar el valor de la ecuación a la matriz F
             F[m-1, n-1] = eq
 
     return F.flatten()
 
 # Función para calcular la matrix J(X) evaluada en V
-def construir_J(VX, vy, constante, N, M):
+def construir_J(VX, vy, N, M, precision):
     total_cuadros_centro = (N - 2) * (M - 2)
     J = np.zeros((total_cuadros_centro, total_cuadros_centro), dtype=float)
-
-    for n in range (total_cuadros_centro):
-        for m in range (total_cuadros_centro):
-            J[m, n] = 0
+    bordes_izq = []
+    bordes_der = []
+    
+    for w in range(1, M - 3):
+        bordes_izq.append((N-2) * w)
+        bordes_der.append(((N-2) * (w+1)) - 1)
 
     for m in range(1, M - 1):
         for n in range(1, N - 1):
 
             k = (m - 1) * (N - 2) + (n - 1)
-            
-            #derivadas del centro
-            if N - 1 <= k <= ((N - 2) * (M - 3)) - 2:
-                J[k, k] = 1/8 * VX[m, n-1] - 1/8 * VX[m, n+1] - constante
-                J[k, k+1] = 1/4 - 1/8 * VX[m, n]
-                J[k, k-1] = 1/4 + 1/8 * VX[m, n]
-                J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                J[k, k-(N-2)] = 1/4 + 1/8 * vy
                 
             #derivadas de la izquierda
-            if k % (N - 2) == 0 and k != 0 and k != (N - 2) * (M - 3):
-                J[k, k] = 1/8 - 1/8 * VX[m, 2] - constante
-                J[k, k+1] = 1/4 - 1/8 * VX[m, 1]
-                J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                J[k, k-(N-2)] = 1/4 + 1/8 * vy
+            if k in bordes_izq:
+                #J[k, k] = round(1/8 * (1 - VX[m, 2]) - 1, precision)
+                J[k, k] = -1
+                J[k, k+1] = round(1/4 - 1/8 * VX[m, 1], precision)
+                J[k, k+(N-2)] = round(1/4 - 1/8 * vy, precision)
+                J[k, k-(N-2)] = round(1/4 + 1/8 * vy, precision)
                 
             #derivadas de la derecha
-            for w in range(2, M - 2):
-                if (k / (w * (N - 2) - 1)) == 1 and k != 0:
-                    J[k, k] = 1/8 * VX[m, N-3] - constante
-                    J[k, k-1] = 1/4 + 1/8 * VX[m, N-2]
-                    J[k, k+(N-2)] = 1/4 - 1/8 * vy
-                    J[k, k-(N-2)] = 1/4 + 1/8 * vy
+            elif k in bordes_der:
+                #J[k, k] = round(1/8 * VX[m, N-3] - 1, precision)
+                J[k, k] = -1
+                J[k, k-1] = round(1/4 + 1/8 * VX[m, N-2], precision)
+                J[k, k+(N-2)] = round(1/4 - 1/8 * vy, precision)
+                J[k, k-(N-2)] = round(1/4 + 1/8 * vy, precision)
+
+            #derivadas del centro
+            elif N - 1 <= k and k <= ((N - 2) * (M - 3)) - 2 and k not in bordes_izq and k not in bordes_der:
+                #J[k, k] = round(1/8 * (VX[m, n-1] - VX[m, n+1]) - 1, precision)
+                J[k, k] = -1
+                J[k, k+1] = round(1/4 - 1/8 * VX[m, n], precision)
+                J[k, k-1] = round(1/4 + 1/8 * VX[m, n], precision)
+                J[k, k+(N-2)] = round(1/4 - 1/8 * vy, precision)
+                J[k, k-(N-2)] = round(1/4 + 1/8 * vy, precision)
                     
             #derivadas de arriba
-            if 1 <= k <= (N - 4):
-                J[k, k] = 1/8 * VX[m, n-1] - 1/8 * VX[m, n+1] - constante
-                J[k, k+1] = 1/4 - 1/8 * VX[1, n]
-                J[k, k-1] = 1/4 + 1/8 * VX[1, n]
-                J[k, k+(N-2)] = 1/4 - 1/8 * vy
+            elif 1 <= k <= (N - 4):
+                #J[k, k] = round(1/8 * (VX[m, n-1] - VX[m, n+1]) - 1, precision)
+                J[k, k] = -1
+                J[k, k+1] = round(1/4 - 1/8 * VX[1, n], precision)
+                J[k, k-1] = round(1/4 + 1/8 * VX[1, n], precision)
+                J[k, k+(N-2)] = round(1/4 - 1/8 * vy, precision)
                 
             #derivadas de abajo
             elif (((N - 2) * (M - 3)) + 1) <= k <= (((N - 2) * (M - 2)) - 2):
-                J[k, k] = 1/8 * VX[m, n-1] - 1/8 * VX[m, n+1] - constante
-                J[k, k+1] = 1/4 - 1/8 * VX[m, n]
-                J[k, k-1] = 1/4 + 1/8 * VX[m, n]
-                J[k, k-(N-2)] = 1/4 + 1/8 * vy
+                #J[k, k] = round(1/8 * (VX[m, n-1] - VX[m, n+1]) - 1, precision)
+                J[k, k] = -1
+                J[k, k+1] = round(1/4 - 1/8 * VX[m, n], precision)
+                J[k, k-1] = round(1/4 + 1/8 * VX[m, n], precision)
+                J[k, k-(N-2)] = round(1/4 + 1/8 * vy, precision)
                 
             #derivada cuadro esquina superior izquierda
             elif k == 0:
-                J[k, k] = 1/8 - 1/8 * VX[1, 2] - constante
-                J[k, k+1] = 1/4 - 1/8 * VX[1, 1]
-                J[k, k+(N-2)] = 1/4 - 1/8 * vy
+                #J[k, k] = round(1/8 * (1 - VX[1, 2]) - 1, precision)
+                J[k, k] = -1
+                J[k, k+1] = round(1/4 - 1/8 * VX[1, 1], precision)
+                J[k, k+(N-2)] = round(1/4 - 1/8 * vy, precision)
                 
             #derivada cuadro esquina superior derecha
             elif k == (N - 3):
-                J[k, k] = 1/8 * VX[1, N - 3] - constante
-                J[k, k-1] = 1/4 + 1/8 * VX[1, N-2]
-                J[k, k+(N-2)] = 1/4 - 1/8 * vy
+                #J[k, k] = round(1/8 * VX[1, N - 3] - 1, precision)
+                J[k, k] = -1
+                J[k, k-1] = round(1/4 + 1/8 * VX[1, N-2], precision)
+                J[k, k+(N-2)] = round(1/4 - 1/8 * vy, precision)
                 
             #derivada cuadro esquina inferior izquierda
             elif k == ((N - 2) * (M - 3)):
-                J[k, k] = 1/8 - 1/8 * VX[M-2, 2] - constante
-                J[k, k+1] = 1/4 - 1/8 * VX[M-2, 1]
-                J[k, k-(N-2)] = 1/4 + 1/8 * vy
+                #J[k, k] = round(1/8 * (1 - VX[M-2, 2]) - 1, precision)
+                J[k, k] = -1
+                J[k, k+1] = round(1/4 - 1/8 * VX[M-2, 1], precision)
+                J[k, k-(N-2)] = round(1/4 + 1/8 * vy, precision)
 
             #derivada cuadro esquina inferior derecha
             elif k == ((N - 2) * (M - 2) - 1):
-                J[k, k] = 1/8 * VX[M-2, N-3] - constante
-                J[k, k-1] = 1/4 + 1/8 * VX[M-2, N-2]
-                J[k, k-(N-2)] = 1/4 + 1/8 * vy
+                #J[k, k] = round(1/8 * VX[M-2, N-3] - 1, precision)
+                J[k, k] = -1
+                J[k, k-1] = round(1/4 + 1/8 * VX[M-2, N-2], precision)
+                J[k, k-(N-2)] = round(1/4 + 1/8 * vy, precision)
                 
             else:
                 0
-
-    return csc_array(J), J
+    return J
 
 # Método de Newton-Raphson
-def resolver_sistema(VX, vy, c, N, M, tolerancia, ITER):
+def resolver_sistema(VX, vy, N, M, relajacion, tolerancia, precision, ITER, ITER_OG):
     try:
-        #print(f"Iteración {ITER_OG - ITER + 1}")
-        F = construir_F(VX, vy, N, M)
-        J, K = construir_J(VX, vy, c, N, M)
+        print(f"Iteración {ITER_OG - ITER + 1}")
 
-        print("\nMetodo del gradiente descendente")
-        i1, h1 = gradiente_descendente(K, VX, F, N, M, ITER)
-        print(i1, h1)
+        F = construir_F(VX, vy, N, M, precision)
+        J = construir_J(VX, vy, N, M, precision)
+        H = np.linalg.solve(J, -F)
+        H = relajacion * H
 
-        print("\nMetodo del gradiente conjugado")
-        i2, h2 = gradiente_conjugado(K, VX, F, N, M, ITER, 1e-8, 1e-8)
-        print(i2, h2)
+        #Graficar_Matriz(VX, "Velocidad X", 'lower')
+        #Graficar_Matriz(J, "J(X)", 'upper')
+        #Graficar_Matriz(F.reshape((M-2, N-2)), "F(X)", 'lower')
 
-        Graficar_Jacobiano(K)
-        #H = spla.spsolve(J, -F)
+        Norma = np.min(VX[1:M-1, 1:N-1])
 
-        #max_H = max(abs(H))
-        #print(H, max_H)
+        #print("J", np.array2string(K, separator=', ', threshold=np.inf))
+        #print("F", np.array2string(S, separator=', ', threshold=np.inf))
+        #print("vx", VX)
+
+        if Norma <= tolerancia or ITER == 1:
+            return VX
         
-        #if max_H < tolerancia or ITER == 0:
-        #    return VX, ITER
-        H1 = VX
-        H2 = VX
-        
-        H1 = H1[1:M-1, 1:N-1] + h1.reshape((M-2, N-2))
-        H2 = H2[1:M-1, 1:N-1] + h2.reshape((M-2, N-2))
-        
-        return i1, H1, i2, H2
+        nuevo_vx = VX.copy()  # Usar copy() para evitar modificar el original directamente
+        nuevo_vx[1:M-1, 1:N-1] = VX[1:M-1, 1:N-1] + np.reshape(H, (M-2, N-2))
+
+        return resolver_sistema(nuevo_vx, vy, N, M, relajacion, tolerancia, precision, ITER-1, ITER_OG)
 
     except spla.MatrixRankWarning:
-        return VX, ITER
+        return VX
     
     except RuntimeError as e:
-        return VX, ITER
+        return VX
 
-# Mostrar resultados
-def graficar_resultado(vx_final, iter_final, c):
-    plt.figure(figsize=(12, 6))
-    plt.imshow(vx_final, cmap='jet', interpolation='nearest', origin='lower', aspect='auto')
-    plt.colorbar(label='v_x')
-    plt.title(f'Distribución final de v_x (c={c}, Iteración {iter_final})', fontsize=14)
-    plt.xlabel('Índice i', fontsize=12)
-    plt.ylabel('Índice j', fontsize=12)
-    plt.show()
+# Definir dimensiones de la malla
+Columnas, Filas = 50, 6
 
-vx_i_1, vx_final_1, vx_i_2, vx_final_2 = resolver_sistema(vel_x_3, 0, -1, N, M, 1, 8)
+# Inicializar matrizes de velocidad
+vel_x_1 = Matriz_Redución_Completa(Filas, Columnas, 10)
+vel_x_2 = Matriz_Redución_Eje_X(Filas, Columnas, 10)
+vel_x_3 = Matriz_Velocidades_Uniforme(Filas, Columnas, 1)
+vel_x_4 = Matriz_Velocidades_Uniforme(Filas, Columnas, 0)
 
-graficar_resultado(vx_final_1, vx_i_1, -1)
-graficar_resultado(vx_final_2, vx_i_2, -1)
+# Definir el número máximo de iteraciones, tolerancia y cantidad de decimales
+i = 100
+tolerancia = 3e-3
+decimales = 20
+factor_relajacion = 0.1
 
-# for c_val in [0, 1, -1]:
-#     vx_final, iter_final = resolver_sistema(vel_x_1, vel_x_1, 1, c_val, N, M, 1, 2, 2)
-#     graficar_resultado(vx_final, iter_final, c_val)
-
-# for c_val in [0, 1, -1]:
-#     vx_final, iter_final = resolver_sistema(vel_x_2, vel_x_2, 0, c_val, N, M, 1, 2, 2)
-#     graficar_resultado(vx_final, iter_final, c_val)
-
-# for c_val in [0, 1, -1]:
-#     vx_final, iter_final = resolver_sistema(vel_x_3, vel_x_3, 0, c_val, N, M, 1, 2, 2)
-#     graficar_resultado(vx_final, iter_final, c_val)
+vel_x_final = resolver_sistema(vel_x_2, 0, Columnas, Filas, factor_relajacion, tolerancia, decimales, i, i)
+Graficar_Matriz(vel_x_final, "Velocidad X final", 'lower')
