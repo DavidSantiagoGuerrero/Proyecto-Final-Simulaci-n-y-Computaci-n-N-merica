@@ -1,10 +1,14 @@
 import matplotlib.pyplot as plt
 
-def Graficar_Matriz(matriz, titulo, origen):
-    plt.figure(figsize=(12, 6))
-    plt.imshow(matriz, cmap='jet', interpolation='nearest', origin=origen, aspect='auto')
-    plt.colorbar(label='v_x')
-    plt.title(titulo, fontsize=14)
-    plt.xlabel('Índice i', fontsize=12)
-    plt.ylabel('Índice j', fontsize=12)
+def Graficar_Matriz(matriz, titulo, origen, vmin=None, vmax=None):
+    plt.figure(figsize=(10, 6))
+    plt.title(titulo)
+    
+    # Cambiar el colormap a uno pastel y simétrico
+    im = plt.imshow(matriz, cmap='coolwarm', origin=origen, vmin=vmin, vmax=vmax)
+    
+    plt.colorbar(im, label='Valor')
+    plt.xlabel('Columna')
+    plt.ylabel('Fila')
+    plt.grid(False)
     plt.show()

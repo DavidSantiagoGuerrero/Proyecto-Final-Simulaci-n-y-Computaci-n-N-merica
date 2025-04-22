@@ -124,31 +124,26 @@ def resolver_sistema(VX, vy, N, M, tolerancia, ITER, ITER_OG, precision):
         J = construir_J(VX, vy, N, M, precision)
         H = np.linalg.solve(J, -F)
 
-        Graficar_Matriz(VX, "Velocidad X", 'lower')
+        # Modificar las llamadas a Graficar_Matriz para usar un rango de colores adaptado a valores pequeños
+        Graficar_Matriz(VX, "Velocidad X", 'lower', vmin=0, vmax=max(0.1, np.max(VX)))
         Graficar_Matriz(J, "J(X)", 'upper')
-        Graficar_Matriz(F.reshape((M-2, N-2)), "F(X)", 'lower')
+        Graficar_Matriz(F.reshape((M-2, N-2)), "F(X)", 'lower', vmin=np.min(F), vmax=np.max(F))
 
         Norma_Infinito = np.linalg.norm(H, ord=np.inf)
         max_H = max(abs(H))
 
-        #print("J", np.array2string(K, separator=', ', threshold=np.inf))
-        #print("F", np.array2string(S, separator=', ', threshold=np.inf))
-        #print("vx", VX)
-
         print("h1", H, Norma_Infinito)
 
-        # print("h2", H2, max_H)
-        # if (np.allclose(np.dot(K, H1), F)):
-        #     print("La solución es exacta")
-        # else:
-        #     print("La solución no es exacta")
-        # print(np.dot(K, H1))
-
         if Norma_Infinito < tolerancia or ITER == 1:
+            # Graficar el resultado final con escala de colores ajustada
+            Graficar_Matriz(VX, "Velocidad X final", 'lower', vmin=0, vmax=max(0.1, np.max(VX)))
             return VX
         
-        nuevo_vx = VX
-        nuevo_vx[1:M-1, 1:N-1] = VX[1:M-1, 1:N-1] + np.reshape(H, (M-2, N-2))
+        # Añadir un factor de relajación para controlar la velocidad de convergencia
+        factor_relajacion = 0.1  # Valores entre 0 y 1, menor valor = cambio más lento
+        
+        nuevo_vx = VX.copy()  # Usar copy() para evitar modificar el original directamente
+        nuevo_vx[1:M-1, 1:N-1] = VX[1:M-1, 1:N-1] + factor_relajacion * np.reshape(H, (M-2, N-2))
 
         return resolver_sistema(nuevo_vx, vy, N, M, tolerancia, ITER-1, ITER_OG, precision)
 
@@ -173,5 +168,7 @@ i = 10
 tolerancia = 1e-4
 decimales = 20
 
-vel_x_final = resolver_sistema(vel_x_1, 0, Columnas, Filas, tolerancia, i, i, decimales)
+# Probar con diferentes condiciones iniciales o parámetros
+vel_y = 0.1  # Añadir una pequeña componente de velocidad en Y
+vel_x_final = resolver_sistema(vel_x_1, vel_y, Columnas, Filas, tolerancia, i, i, decimales)
 Graficar_Matriz(vel_x_final, "Velocidad X final", 'lower')
