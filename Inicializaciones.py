@@ -28,7 +28,7 @@ def Matriz_Redución_Completa(filas, columnas, precision):
     fil = int(filas/2)
     
     if (filas % 2 == 0):
-        for m in range (1, int(fil)):
+        for m in range (1, fil):
             factor = 1 - abs(fil - m) / fil  
             for n in range (1, columnas - 1):
                 velocidad = round(Matriz[m, n] * factor, precision)
@@ -36,12 +36,12 @@ def Matriz_Redución_Completa(filas, columnas, precision):
                 Matriz[m, n] = velocidad
                 Matriz[filas - (m + 1), n] = velocidad
     else:
-        for m in range (1, int(fil) + 1):
+        for m in range (1, fil + 1):
             factor = 1 - abs(fil - m) / fil
             for n in range (1, columnas - 1):
                 velocidad = round(Matriz[m, n] * factor, precision)
 
-                if (m != int(fil)):
+                if (m != fil):
                     Matriz[m, n] = velocidad
                     Matriz[filas - (m + 1), n] = velocidad
                 else:

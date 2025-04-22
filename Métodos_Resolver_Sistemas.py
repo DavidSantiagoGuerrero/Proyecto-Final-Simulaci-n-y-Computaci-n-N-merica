@@ -5,8 +5,6 @@ def gradiente_descendente(J, H, F, N, M, ITER):
     H = H[1:M-1, 1:N-1].flatten()
     if (np.allclose(J, J.T, atol = 1e-8) and np.dot(np.dot (H.T, J), H) >= 0):
         for i in range (1, ITER+1):
-            e, J = construir_J(H.reshape(), 0, -1, N, M)
-            F = construir_F(H.reshape(), 0, N, M)
             G = F.T - np.dot(J, H)
             alpha = np.dot(G.T, G) / (np.dot(np.dot(G.T, J), G))
             H = H - alpha * G
@@ -23,7 +21,6 @@ def gradiente_conjugado(J, H, F, N, M, ITER, tol1, tol2):
         c = np.dot(G, G.T)
 
         for i in range (1, ITER+1):
-            e, J = construir_J(H, 0, -1, N, M)
             if ((np.dot(v.T, v))**(1/2) < tol1):
                 break
             alpha = c / (np.dot(np.dot(v.T, J), v))

@@ -18,7 +18,7 @@ def construir_F(VX, vy, N, M, precision):
         for n in range (1, N-1):
             # Calcular la ecuación para el punto (m, n)
             eq = round((1/4) * (VX[m, n+1] + VX[m, n-1] + VX[m+1, n] + VX[m-1, n])
-                       + (1/8) * (VX[m, n] * (VX[m, n-1]  - VX[m, n+1])
+                       + (1/8) * (VX[m, n] * (VX[m, n-1] - VX[m, n+1])
                        + vy * (VX[m-1, n] - VX[m+1, n])) - VX[m, n], precision)
             
             # Asignar el valor de la ecuación a la matriz F
@@ -116,41 +116,32 @@ def construir_J(VX, vy, N, M, precision):
     return J
 
 # Método de Newton-Raphson
-def resolver_sistema(VX, vy, N, M, tolerancia, ITER, ITER_OG, precision):
+def resolver_sistema(VX, vy, N, M, relajacion, tolerancia, precision, ITER, ITER_OG):
     try:
         print(f"Iteración {ITER_OG - ITER + 1}")
 
         F = construir_F(VX, vy, N, M, precision)
         J = construir_J(VX, vy, N, M, precision)
         H = np.linalg.solve(J, -F)
+        H = relajacion * H
 
-        Graficar_Matriz(VX, "Velocidad X", 'lower')
-        Graficar_Matriz(J, "J(X)", 'upper')
-        Graficar_Matriz(F.reshape((M-2, N-2)), "F(X)", 'lower')
+        #Graficar_Matriz(VX, "Velocidad X", 'lower')
+        #Graficar_Matriz(J, "J(X)", 'upper')
+        #Graficar_Matriz(F.reshape((M-2, N-2)), "F(X)", 'lower')
 
-        Norma_Infinito = np.linalg.norm(H, ord=np.inf)
-        max_H = max(abs(H))
+        Norma = np.min(VX[1:M-1, 1:N-1])
 
         #print("J", np.array2string(K, separator=', ', threshold=np.inf))
         #print("F", np.array2string(S, separator=', ', threshold=np.inf))
         #print("vx", VX)
 
-        print("h1", H, Norma_Infinito)
-
-        # print("h2", H2, max_H)
-        # if (np.allclose(np.dot(K, H1), F)):
-        #     print("La solución es exacta")
-        # else:
-        #     print("La solución no es exacta")
-        # print(np.dot(K, H1))
-
-        if Norma_Infinito < tolerancia or ITER == 1:
+        if Norma <= tolerancia or ITER == 1:
             return VX
         
-        nuevo_vx = VX
+        nuevo_vx = VX.copy()  # Usar copy() para evitar modificar el original directamente
         nuevo_vx[1:M-1, 1:N-1] = VX[1:M-1, 1:N-1] + np.reshape(H, (M-2, N-2))
 
-        return resolver_sistema(nuevo_vx, vy, N, M, tolerancia, ITER-1, ITER_OG, precision)
+        return resolver_sistema(nuevo_vx, vy, N, M, relajacion, tolerancia, precision, ITER-1, ITER_OG)
 
     except spla.MatrixRankWarning:
         return VX
@@ -159,19 +150,19 @@ def resolver_sistema(VX, vy, N, M, tolerancia, ITER, ITER_OG, precision):
         return VX
 
 # Definir dimensiones de la malla
-Columnas, Filas = 50, 8
+Columnas, Filas = 50, 6
 
 # Inicializar matrizes de velocidad
-vel_x = np.zeros((Filas, Columnas))
 vel_x_1 = Matriz_Redución_Completa(Filas, Columnas, 10)
 vel_x_2 = Matriz_Redución_Eje_X(Filas, Columnas, 10)
 vel_x_3 = Matriz_Velocidades_Uniforme(Filas, Columnas, 1)
 vel_x_4 = Matriz_Velocidades_Uniforme(Filas, Columnas, 0)
 
 # Definir el número máximo de iteraciones, tolerancia y cantidad de decimales
-i = 10
-tolerancia = 1e-4
+i = 100
+tolerancia = 3e-3
 decimales = 20
+factor_relajacion = 0.1
 
-vel_x_final = resolver_sistema(vel_x_1, 0, Columnas, Filas, tolerancia, i, i, decimales)
+vel_x_final = resolver_sistema(vel_x_2, 0, Columnas, Filas, factor_relajacion, tolerancia, decimales, i, i)
 Graficar_Matriz(vel_x_final, "Velocidad X final", 'lower')
