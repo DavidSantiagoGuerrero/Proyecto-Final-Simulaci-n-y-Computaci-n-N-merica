@@ -38,3 +38,16 @@ def gradiente_conjugado(J, H, F, N, M, ITER, tol1, tol2):
         return i, H
     else:
         print("No se puede aplicar el método del gradiente conjugado\nporque la matriz no es simétrica o no es positiva definida")
+
+def jacobi(J, F, max_iter=100, tol=1e-4):
+    n = len(F)
+    H = np.zeros_like(F)
+    for it in range(max_iter):
+        H_nuevo = np.zeros_like(H)
+        for i in range(n):
+            suma = np.dot(J[i, :], H) - J[i, i] * H[i]
+            H_nuevo[i] = (-F[i] - suma) / J[i, i]
+        if np.linalg.norm(H_nuevo - H, np.inf) < tol:
+            return H_nuevo
+        H = H_nuevo.copy()
+    return H
