@@ -6,9 +6,7 @@ def Graficar_Matriz(matriz, titulo, origen):
     plt.title(titulo)
     
     im = plt.imshow(matriz, cmap = 'coolwarm', origin = origen)
-    
-    # Personalizar colorbar con más decimales
-    cbar = plt.colorbar(im, format="%.10f")  # Aquí defines cuántos decimales
+    cbar = plt.colorbar(im, format="%.10f")
     cbar.set_label('Valor')
 
     plt.xlabel('Columna')
